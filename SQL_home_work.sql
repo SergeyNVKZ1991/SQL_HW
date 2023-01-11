@@ -190,12 +190,15 @@ select album_name, AVG(duration) as duration
 
 --4. все исполнители, которые не выпустили альбомы в 2020 году;
 
-select p.Performers_name as name, a.Yers_of_releas 
-  from Performers as p join Performers_albums as pa on p.id = pa.Performers_id
-                       join albums as a             on pa.albums_id = a.id
-  group by p.Performers_name, a.Yers_of_releas
-having not a.Yers_of_releas like '2020'
-  order by a.Yers_of_releas asc
+ select p.Performers_name as name, a.Yers_of_releas
+   from Performers as p join Performers_albums as pa on p.id = pa.Performers_id
+                        join albums as a             on pa.albums_id = a.id
+  GROUP by p.Performers_name, a.Yers_of_releas
+ having p.Performers_name != (select p.Performers_name as name 
+                                from Performers as p join Performers_albums as pa on p.id = pa.Performers_id
+                                                     join albums as a             on pa.albums_id = a.id
+                               group by p.Performers_name, a.Yers_of_releas
+                              having a.Yers_of_releas like '2020')
 
 --5. названия сборников, в которых присутствует конкретный исполнитель (выберите сами);
 
@@ -206,24 +209,16 @@ select c.collections_name as name, p.Performers_name
                         join Performers as p         on pa.Performers_id = p.id
    where p.Performers_name like 'Asti'
 group by c.collections_name, p.Performers_name
-order by c.collections_name asc
                       
 --6. название альбомов, в которых присутствуют исполнители более 1 жанра;
--- не могу придумать, как реализовать данную функцию...
 
-select a.album_name as name, p.Performers_name, count(g.name) as c_ganre
+select a.album_name as album
   from Albums as a join Performers_Albums as pa on a.id = pa.albums_id 
                    join Performers as p         on pa.Performers_id = p.id 
                    join Genre_Performers as gp  on p.id = gp.Performers_id
                    join Genre as g              on gp.Genre_id = g.id 
-GROUP BY a.album_name, p.Performers_name
-HAVING COUNT(g.name) > (select count(g.name) as c_ganre
-                        from Albums as a join Performers_Albums as pa on a.id = pa.albums_id 
-                                         join Performers as p         on pa.Performers_id = p.id 
-                                         join Genre_Performers as gp  on p.id = gp.Performers_id
-                                         join Genre as g              on gp.Genre_id = g.id 
-                                         GROUP BY a.album_name
-                                         ORDER BY c_ganre LIMIT 1)
+GROUP BY a.album_name
+HAVING COUNT(distinct g.name) > 1
 
 
 --7. наименование треков, которые не входят в сборники;
@@ -244,7 +239,6 @@ select p.Performers_name as name, s.duration as duration
                        join Songs as s              on a.id = s.albums_id
 where duration = (select min(duration) from songs)
 group by p.Performers_name, s.duration
-order by s.duration asc
 
 --9. название альбомов, содержащих наименьшее количество треков.
  
